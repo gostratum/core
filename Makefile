@@ -1,10 +1,8 @@
-.PHONY: wire build test
-
-wire:
-	wire ./...
+.PHONY: build test
 
 build:
 	go build ./...
 
 test:
 	go test ./...
+

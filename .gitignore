@@ -1,1 +1,7 @@
 .gocache/
+configs/
+*.swp
+*.swo
+*~
+.DS_Store
+
