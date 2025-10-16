@@ -4,7 +4,7 @@ Minimal core for Gostratum cloud applications.
 
 ## Overview
 
-This package provides the foundational building blocks for Gostratum applications. It now includes a dedicated `configx` package for typed configuration loading and validation.
+This package provides the foundational building blocks for Gostratum applications. It includes a dedicated `configx` package for typed configuration loading and validation.
 
 - **Application lifecycle & dependency injection** via [Uber FX](https://uber-go.github.io/fx/)
 - **Configuration management** via [Viper](https://github.com/spf13/viper)
@@ -81,10 +81,12 @@ The `NewViper()` function loads configuration from:
 
 ## Logging
 
-The logger automatically selects development or production mode based on `APP_ENV`:
+The logger automatically selects development or production mode based on `APP_ENV` and is configurable via `core.logger` config (see `configx`):
 
 - `APP_ENV=dev`: Development mode (human-readable console output)
 - Other values: Production mode (JSON structured logs)
+
+Recent fix: the logger now preserves the development encoder defaults provided by `zap.NewDevelopmentConfig()` and only applies a custom time format when needed. This avoids unintentionally overwriting development-friendly settings.
 
 ## Health Checks
 
@@ -115,14 +117,19 @@ Control health check timeout via environment variable:
 
 - `STRATUM_HEALTH_TIMEOUT_MS`: Timeout in milliseconds (default: 300ms)
 
+Note: the health registry supports programmatic `Set` calls to update check status; however `Aggregate` currently queries registered checks and runs them with the configured timeout. Consider reviewing `Set` vs `Aggregate` semantics if you need stored status to be included in aggregation results.
+
 ## Dependencies
 
-This package has minimal dependencies:
+This package depends on a small set of well-known libraries:
 
 - `go.uber.org/fx` - Application lifecycle and dependency injection
 - `go.uber.org/zap` - Structured logging
 - `github.com/spf13/viper` - Configuration management
-- `github.com/spf13/pflag` - Command-line flag parsing
+- `github.com/creasty/defaults` - Struct defaulting
+- `github.com/go-playground/validator/v10` - Validation for config structs
+
+Run `go mod tidy` to ensure the `go.mod` is clean after making cross-module changes.
 
 ## License
 
