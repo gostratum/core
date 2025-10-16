@@ -44,7 +44,12 @@ func NewLogger(lc fx.Lifecycle, c LoggerConfig) (*zap.Logger, error) {
 		cfg = zap.NewDevelopmentConfig()
 		cfg.Level = zap.NewAtomicLevelAt(level)
 		cfg.Encoding = ifEmpty(c.Encoding, "console")
-		cfg.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout("15:04:05.000")
+		// NewDevelopmentConfig already sets a human-friendly time encoder; only
+		// set a custom layout if a non-empty encoding is requested that
+		// necessitates overriding the default.
+		if cfg.EncoderConfig.EncodeTime == nil {
+			cfg.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout("15:04:05.000")
+		}
 	} else {
 		cfg = zap.NewProductionConfig()
 		cfg.Level = zap.NewAtomicLevelAt(level)
