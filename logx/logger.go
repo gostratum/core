@@ -1,5 +1,4 @@
-// Package logger (core/logger)
-package logger
+package logx
 
 import (
 	"context"
@@ -97,16 +96,16 @@ func FxEventLogger(l *zap.Logger) fxevent.Logger { return &fxevent.ZapLogger{Log
 
 func Module() fx.Option {
 	return fx.Module(
-		"logger",
+		"logx",
 		fx.Provide(
 			NewLoggerConfig,
 			NewLogger,
+			ProvideAdapter,
 			NewSugared,
 		),
 		fx.WithLogger(FxEventLogger),
 	)
 }
-
 func ifEmpty(s, d string) string {
 	if s == "" {
 		return d

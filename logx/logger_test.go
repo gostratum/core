@@ -1,10 +1,10 @@
-package logger_test
+package logx_test
 
 import (
 	"testing"
 
 	"github.com/gostratum/core/configx"
-	"github.com/gostratum/core/logger"
+	"github.com/gostratum/core/logx"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
 	"go.uber.org/zap"
@@ -26,7 +26,7 @@ func TestLoggerModule(t *testing.T) {
 	app := fxtest.New(
 		t,
 		fx.Provide(configx.New),
-		logger.Module(),
+		logx.Module(),
 		fx.Invoke(ctor),
 	)
 	defer app.RequireStart().RequireStop()

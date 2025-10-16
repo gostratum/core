@@ -2,7 +2,7 @@ package core
 
 import (
 	"github.com/gostratum/core/configx"
-	"github.com/gostratum/core/logger"
+	"github.com/gostratum/core/logx"
 	"go.uber.org/fx"
 )
 
@@ -10,7 +10,7 @@ import (
 func New(opts ...fx.Option) *fx.App {
 	return fx.New(
 		fx.Provide(configx.New),
-		logger.Module(),
+		logx.Module(),
 		fx.Provide(NewHealthRegistry),
 		fx.Options(opts...),
 	)
