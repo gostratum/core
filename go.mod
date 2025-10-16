@@ -1,6 +1,6 @@
 module github.com/gostratum/core
 
-go 1.25
+go 1.25.1
 
 require (
 	github.com/creasty/defaults v1.5.0
