@@ -9,7 +9,9 @@ import (
 // New builds the Fx app with default Gostratum core modules.
 func New(opts ...fx.Option) *fx.App {
 	return fx.New(
-		fx.Provide(configx.New, logger.NewLogger, NewHealthRegistry),
+		fx.Provide(configx.New),
+		logger.Module(),
+		fx.Provide(NewHealthRegistry),
 		fx.Options(opts...),
 	)
 }
