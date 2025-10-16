@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/gostratum/core"
+	"github.com/gostratum/core/configx"
 	"github.com/gostratum/core/logger"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
@@ -17,8 +18,7 @@ func TestAppStartStop(t *testing.T) {
 		t,
 		// logger.Module is an fx.Option (module) and should be passed directly
 		// to fx.New / fxtest.New. Provide core constructors separately.
-		logger.Module,
-		fx.Provide(core.NewViper, core.NewHealthRegistry),
+		fx.Provide(configx.New, logger.Module, core.NewHealthRegistry),
 	)
 	defer app.RequireStart().RequireStop()
 }

@@ -9,7 +9,7 @@ Top-level layout
 - `pkg/` — optional shared libraries intended for external reuse.
 - `api/` — transport layer code (HTTP handlers, GRPC, CLI adapters).
 - `config/` or `configx/` — configuration loader and related types.
-  - Note: this repo provides a new `configx` package under `./configx` that contains a typed Loader implementing defaults (via `creasty/defaults`), decoding (mapstructure) and validation (go-playground/validator). Consider moving `configx` to `internal/config` if it's only used internally.
+  - Note: this repo provides a `configx` package under `./configx` that contains a typed Loader implementing defaults (via `creasty/defaults`), decoding (mapstructure) and validation (go-playground/validator). Prefer using `configx.New()` (returns a `configx.Loader`) for typed configuration loading.
 - `domain/` — core business entities, interfaces (usecases/repositories contracts).
 - `usecase/` or `app/` — application use-cases / interactors implementing business rules.
 - `infra/` — infrastructure implementations (DB, external clients, file storage).

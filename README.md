@@ -36,6 +36,8 @@ type MyConfig struct {
 	Port int `mapstructure:"port"`
 }
 
+func (MyConfig) Prefix() string { return "app" }
+
 type PingCheck struct{}
 
 func (PingCheck) Name() string            { return "ping" }
@@ -43,10 +45,11 @@ func (PingCheck) Kind() core.Kind         { return core.Readiness }
 func (PingCheck) Check(ctx context.Context) error { return nil }
 
 func main() {
-	// Option A: use the existing core helper (viper instance)
+	// Use the typed loader from `configx` for binding/validation.
 	app := core.New(
-		fx.Invoke(func(v *viper.Viper, h core.Registry) {
-			cfg, _ := core.LoadConfig[MyConfig](v, "app")
+		fx.Invoke(func(l configx.Loader, h core.Registry) {
+			var cfg MyConfig
+			_ = l.Bind(&cfg) // MyConfig must implement Prefix() string if using sub-keys
 			fmt.Println("Loaded config:", cfg)
 			h.Register(PingCheck{})
 		}),

@@ -2,7 +2,9 @@ package configx
 
 import (
 	"os"
+	"reflect"
 	"strings"
+	"time"
 
 	"github.com/creasty/defaults"
 	"github.com/go-playground/validator/v10"
@@ -28,22 +30,27 @@ type viperLoader struct {
 func New() Loader {
 	v := viper.New()
 
+	// 1) Config paths (multi)
 	paths := os.Getenv("CONFIG_PATHS")
 	if paths == "" {
 		paths = "./configs"
 	}
 	for p := range strings.SplitSeq(paths, ",") {
-		v.AddConfigPath(strings.TrimSpace(p))
+		if p = strings.TrimSpace(p); p != "" {
+			v.AddConfigPath(p)
+		}
 	}
 
+	// 2) Layering: base + env (APP_ENV=dev|staging|prod ...)
 	v.SetConfigName("base")
 	_ = v.MergeInConfig()
 
-	if env := os.Getenv("APP_ENV"); env != "" {
+	if env := strings.TrimSpace(os.Getenv("APP_ENV")); env != "" {
 		v.SetConfigName(env)
 		_ = v.MergeInConfig()
 	}
 
+	// 3) ENV override (namespaced)
 	v.SetEnvPrefix("STRATUM")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 	v.AutomaticEnv()
@@ -56,7 +63,10 @@ func (l *viperLoader) Bind(props Configurable) error {
 	if sub == nil {
 		sub = viper.New()
 	}
-	_ = defaults.Set(props)
+
+	if err := defaults.Set(props); err != nil {
+		return err
+	}
 
 	// Unmarshal into a map first, then decode with mapstructure to set decoder options.
 	var m map[string]any
@@ -68,6 +78,21 @@ func (l *viperLoader) Bind(props Configurable) error {
 		TagName:          "mapstructure",
 		WeaklyTypedInput: true,
 		Result:           props,
+		DecodeHook: mapstructure.ComposeDecodeHookFunc(
+			mapstructure.StringToTimeDurationHookFunc(),
+			mapstructure.StringToSliceHookFunc(","),
+			func(from, to reflect.Type, data any) (any, error) {
+				if from.Kind() == reflect.String && to == reflect.TypeOf(time.Time{}) {
+					s := data.(string)
+					if s == "" {
+						return time.Time{}, nil
+					}
+					t, err := time.Parse(time.RFC3339, s)
+					return t, err
+				}
+				return data, nil
+			},
+		),
 	}
 	dec, err := mapstructure.NewDecoder(decCfg)
 	if err != nil {

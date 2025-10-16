@@ -3,6 +3,7 @@ package logger_test
 import (
 	"testing"
 
+	"github.com/gostratum/core/configx"
 	"github.com/gostratum/core/logger"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
@@ -24,7 +25,8 @@ func TestLoggerModule(t *testing.T) {
 
 	app := fxtest.New(
 		t,
-		logger.Module,
+		fx.Provide(configx.New),
+		logger.Module(),
 		fx.Invoke(ctor),
 	)
 	defer app.RequireStart().RequireStop()
