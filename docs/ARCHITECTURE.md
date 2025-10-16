@@ -9,6 +9,7 @@ Top-level layout
 - `pkg/` — optional shared libraries intended for external reuse.
 - `api/` — transport layer code (HTTP handlers, GRPC, CLI adapters).
 - `config/` or `configx/` — configuration loader and related types.
+  - Note: this repo provides a new `configx` package under `./configx` that contains a typed Loader implementing defaults (via `creasty/defaults`), decoding (mapstructure) and validation (go-playground/validator). Consider moving `configx` to `internal/config` if it's only used internally.
 - `domain/` — core business entities, interfaces (usecases/repositories contracts).
 - `usecase/` or `app/` — application use-cases / interactors implementing business rules.
 - `infra/` — infrastructure implementations (DB, external clients, file storage).
@@ -57,6 +58,16 @@ docs/
 Migration plan (small incremental steps)
 
 1. Add `internal/config` (or keep `configx`) and move loader there. Update imports.
+
+Tests
+
+- Unit tests for `configx` are included at `configx/config_test.go`. Run tests with:
+
+```bash
+GOWORK=off go test ./...
+```
+
+These tests cover a happy-path Bind and a validation failure path; they should pass before and after incremental refactors.
 2. Create `domain` and move domain types/errors.
 3. Create `infra` for logging and database clients.
 4. Introduce `usecase` layer and move business logic.

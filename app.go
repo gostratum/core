@@ -1,18 +1,15 @@
 package core
 
 import (
+	"github.com/gostratum/core/configx"
+	"github.com/gostratum/core/logger"
 	"go.uber.org/fx"
-	"go.uber.org/fx/fxevent"
-	"go.uber.org/zap"
 )
 
 // New builds the Fx app with default Gostratum core modules.
 func New(opts ...fx.Option) *fx.App {
 	return fx.New(
-		fx.Provide(NewLogger, NewViper, NewHealthRegistry),
-		fx.WithLogger(func(l *zap.Logger) fxevent.Logger {
-			return &fxevent.ZapLogger{Logger: l}
-		}),
+		fx.Provide(configx.New, logger.NewLogger, NewHealthRegistry),
 		fx.Options(opts...),
 	)
 }

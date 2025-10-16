@@ -4,7 +4,7 @@ Minimal core for Gostratum cloud applications.
 
 ## Overview
 
-This package provides the foundational building blocks for Gostratum applications:
+This package provides the foundational building blocks for Gostratum applications. It now includes a dedicated `configx` package for typed configuration loading and validation.
 
 - **Application lifecycle & dependency injection** via [Uber FX](https://uber-go.github.io/fx/)
 - **Configuration management** via [Viper](https://github.com/spf13/viper)
@@ -27,6 +27,7 @@ import (
 	"fmt"
 
 	"github.com/gostratum/core"
+	"github.com/gostratum/core/configx"
 	"github.com/spf13/viper"
 	"go.uber.org/fx"
 )
@@ -42,6 +43,7 @@ func (PingCheck) Kind() core.Kind         { return core.Readiness }
 func (PingCheck) Check(ctx context.Context) error { return nil }
 
 func main() {
+	// Option A: use the existing core helper (viper instance)
 	app := core.New(
 		fx.Invoke(func(v *viper.Viper, h core.Registry) {
 			cfg, _ := core.LoadConfig[MyConfig](v, "app")
@@ -50,6 +52,11 @@ func main() {
 		}),
 	)
 	app.Run()
+
+	// Option B: use the new typed loader in `configx` which supports defaults and validation.
+	loader := configx.New()
+	var cfg MyConfig
+	_ = loader.Bind(&cfg) // cfg must implement Prefix() string to locate its sub-key
 }
 ```
 

@@ -1,6 +1,7 @@
 package configx
 
 import (
+	"os"
 	"strings"
 
 	"github.com/creasty/defaults"
@@ -26,11 +27,26 @@ type viperLoader struct {
 // New creates a new viper-based Loader.
 func New() Loader {
 	v := viper.New()
-	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	paths := os.Getenv("CONFIG_PATHS")
+	if paths == "" {
+		paths = "./configs"
+	}
+	for p := range strings.SplitSeq(paths, ",") {
+		v.AddConfigPath(strings.TrimSpace(p))
+	}
+
+	v.SetConfigName("base")
+	_ = v.MergeInConfig()
+
+	if env := os.Getenv("APP_ENV"); env != "" {
+		v.SetConfigName(env)
+		_ = v.MergeInConfig()
+	}
+
+	v.SetEnvPrefix("STRATUM")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 	v.AutomaticEnv()
-	v.SetConfigName("config")
-	v.AddConfigPath("./config")
-	_ = v.ReadInConfig()
 	return &viperLoader{v: v}
 }
 
@@ -43,7 +59,7 @@ func (l *viperLoader) Bind(props Configurable) error {
 	_ = defaults.Set(props)
 
 	// Unmarshal into a map first, then decode with mapstructure to set decoder options.
-	var m map[string]interface{}
+	var m map[string]any
 	if err := sub.Unmarshal(&m); err != nil {
 		return err
 	}

@@ -1,10 +1,11 @@
-package core
+package logger
 
 import (
 	"context"
 	"os"
 
 	"go.uber.org/fx"
+	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
 )
 
@@ -30,3 +31,11 @@ func NewLogger(lc fx.Lifecycle) (*zap.Logger, error) {
 	})
 	return logger, nil
 }
+
+var Module = fx.Module(
+	"logger",
+	fx.Provide(NewLogger),
+	fx.WithLogger(func(l *zap.Logger) fxevent.Logger {
+		return &fxevent.ZapLogger{Logger: l}
+	}),
+)

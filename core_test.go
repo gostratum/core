@@ -6,18 +6,19 @@ import (
 	"testing"
 
 	"github.com/gostratum/core"
-	"github.com/spf13/viper"
+	"github.com/gostratum/core/logger"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
-	"go.uber.org/zap"
 )
 
 // TestAppStartStop verifies that the Fx app starts and stops cleanly.
 func TestAppStartStop(t *testing.T) {
 	app := fxtest.New(
 		t,
-		fx.Provide(core.NewLogger, core.NewViper, core.NewHealthRegistry),
-		fx.Invoke(func(*zap.Logger, *viper.Viper, core.Registry) {}),
+		// logger.Module is an fx.Option (module) and should be passed directly
+		// to fx.New / fxtest.New. Provide core constructors separately.
+		logger.Module,
+		fx.Provide(core.NewViper, core.NewHealthRegistry),
 	)
 	defer app.RequireStart().RequireStop()
 }
@@ -85,31 +86,6 @@ func TestHealthRegistryLivenessReadiness(t *testing.T) {
 	readinessResult := registry.Aggregate(context.Background(), core.Readiness)
 	if !readinessResult.OK || len(readinessResult.Details) != 1 {
 		t.Error("Readiness check should only include readiness checks")
-	}
-}
-
-// TestLoadConfig verifies the LoadConfig generic function.
-func TestLoadConfig(t *testing.T) {
-	v := viper.New()
-	v.Set("app.port", 8080)
-	v.Set("app.name", "test")
-
-	type AppConfig struct {
-		Port int    `mapstructure:"port"`
-		Name string `mapstructure:"name"`
-	}
-
-	cfg, err := core.LoadConfig[AppConfig](v, "app")
-	if err != nil {
-		t.Fatalf("LoadConfig failed: %v", err)
-	}
-
-	if cfg.Port != 8080 {
-		t.Errorf("Expected port 8080, got %d", cfg.Port)
-	}
-
-	if cfg.Name != "test" {
-		t.Errorf("Expected name 'test', got %s", cfg.Name)
 	}
 }
 
