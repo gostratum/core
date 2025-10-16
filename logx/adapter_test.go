@@ -1,9 +1,10 @@
-package logx
+package logx_test
 
 import (
 	"context"
 	"testing"
 
+	"github.com/gostratum/core/logx"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
@@ -12,9 +13,9 @@ import (
 func TestAdapterForwardsAndWith(t *testing.T) {
 	core, observed := observer.New(zapcore.InfoLevel)
 	l := zap.New(core)
-	adapter := ProvideAdapter(l)
+	adapter := logx.ProvideAdapter(l)
 
-	adapter.Info("hello", String("k", "v"))
+	adapter.Info("hello", logx.String("k", "v"))
 
 	if observed.Len() != 1 {
 		t.Fatalf("expected 1 log entry, got %d", observed.Len())
@@ -24,7 +25,7 @@ func TestAdapterForwardsAndWith(t *testing.T) {
 		t.Fatalf("unexpected entry: %#v", e)
 	}
 
-	child := adapter.With(String("component", "c"))
+	child := adapter.With(logx.String("component", "c"))
 	child.Debug("x") // debug dropped by observer level
 	child.Info("y")
 	if observed.Len() != 2 {
@@ -35,11 +36,11 @@ func TestAdapterForwardsAndWith(t *testing.T) {
 func TestContextHelpers(t *testing.T) {
 	core, observed := observer.New(zapcore.InfoLevel)
 	l := zap.New(core)
-	adapter := ProvideAdapter(l)
+	adapter := logx.ProvideAdapter(l)
 
-	ctx := WithContext(context.Background(), adapter)
-	got := FromContext(ctx)
-	got.Info("fromctx", String("k", "v"))
+	ctx := logx.WithContext(context.Background(), adapter)
+	got := logx.FromContext(ctx)
+	got.Info("fromctx", logx.String("k", "v"))
 
 	if observed.Len() != 1 {
 		t.Fatalf("expected 1 log entry, got %d", observed.Len())
