@@ -62,10 +62,10 @@ func Err(err error) zap.Field { return zap.Error(err) }
 
 // Convenience wrappers so consumers don't need to import zap just to create
 // common fields. These mirror the zap field constructors.
-func String(key, val string) zap.Field               { return zap.String(key, val) }
-func Bool(key string, val bool) zap.Field            { return zap.Bool(key, val) }
-func Int(key string, val int) zap.Field              { return zap.Int(key, val) }
-func Int64(key string, val int64) zap.Field          { return zap.Int64(key, val) }
-func Float64(key string, val float64) zap.Field      { return zap.Float64(key, val) }
-func Any(key string, val any) zap.Field              { return zap.Any(key, val) }
-func Duration(key string, val interface{}) zap.Field { return zap.Any(key, val) }
+func String(key, val string) zap.Field          { return zap.String(key, val) }
+func Bool(key string, val bool) zap.Field       { return zap.Bool(key, val) }
+func Int(key string, val int) zap.Field         { return zap.Int(key, val) }
+func Int64(key string, val int64) zap.Field     { return zap.Int64(key, val) }
+func Float64(key string, val float64) zap.Field { return zap.Float64(key, val) }
+func Any(key string, val any) zap.Field         { return zap.Any(key, val) }
+func Duration(key string, val any) zap.Field    { return zap.Any(key, val) }
