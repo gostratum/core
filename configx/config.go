@@ -3,7 +3,6 @@ package configx
 import (
 	"fmt"
 	"os"
-	"reflect"
 	"strings"
 
 	"github.com/creasty/defaults"
@@ -70,53 +69,22 @@ func (l *viperLoader) Bind(props Configurable) error {
 		return err
 	}
 
-	// 1) Auto-bind env for every leaf field under this prefix.
-	if err := walkFields(props, func(fullKey string, _ []string, _ reflect.StructField) error {
-		// Bind with the Viper instance. This respects SetEnvPrefix and Replacer.
-		// No-op if already bound.
-		if err := l.v.BindEnv(fullKey); err != nil {
-			return err
-		}
-		return nil
-	}, prefix); err != nil {
-		return err
-	}
-
-	// 2) Build a nested map[string]any by reading values via v.Get(fullKey).
-	// Using Get() ensures ENV overrides are applied lazily by Viper.
-	m := make(map[string]any)
-	if err := walkFields(props, func(fullKey string, parts []string, _ reflect.StructField) error {
-		val := l.v.Get(fullKey)
-		// Only set when value is present (IsSet) OR defaults produced a non-zero.
-		// We prefer IsSet to avoid polluting subtree with nils.
-		if l.v.IsSet(fullKey) || val != nil {
-			setNested(m, parts, val)
-		}
-		return nil
-	}, prefix); err != nil {
-		return err
-	}
-
-	// 3) Decode into struct with helpful hooks.
-	decCfg := &mapstructure.DecoderConfig{
-		TagName:          "mapstructure",
-		WeaklyTypedInput: true,
-		Result:           props,
-		DecodeHook: mapstructure.ComposeDecodeHookFunc(
-			mapstructure.StringToTimeDurationHookFunc(),
-			mapstructure.StringToSliceHookFunc(","),
-			strToRFC3339TimeHook,
+	// 2) Unmarshal the subtree; root viper handles precedence (ENV > file > defaults)
+	if err := l.v.UnmarshalKey(
+		prefix,
+		props,
+		viper.DecodeHook(
+			mapstructure.ComposeDecodeHookFunc(
+				mapstructure.StringToTimeDurationHookFunc(),
+				mapstructure.StringToSliceHookFunc(","),
+				strToRFC3339TimeHook,
+			),
 		),
-	}
-	dec, err := mapstructure.NewDecoder(decCfg)
-	if err != nil {
-		return err
-	}
-	if err := dec.Decode(m); err != nil {
+	); err != nil {
 		return err
 	}
 
-	// 4) Validate struct (tags: `validate:"..."`). Fail-fast if required fields missing.
+	// 3) Validate
 	return validator.New().Struct(props)
 }
 

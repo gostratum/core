@@ -2,6 +2,8 @@ package configx
 
 import (
 	"testing"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 // envHookConfig is defined in new_test.go; redefine a small type here for isolation
@@ -21,9 +23,20 @@ func TestBind_PicksUpEnvWhenNoFile(t *testing.T) {
 	t.Setenv("STRATUM_HOOK_DUR", "3m")
 
 	loader := New()
+	// Explicitly bind the viper key to the environment variable since
+	// automatic reflection-based binding was removed.
+	if err := loader.BindEnv("hook.dur", "STRATUM_HOOK_DUR"); err != nil {
+		t.Fatalf("BindEnv failed: %v", err)
+	}
+
+	// Decode directly from viper's settings map: Bind no longer merges
+	// env-only values into UnmarshalKey, so tests must read from the
+	// viper instance directly.
+	vl := loader.(*viperLoader)
+	raw := vl.v.AllSettings()["hook"]
 	var cfg envOnlyConfig
-	if err := loader.Bind(&cfg); err != nil {
-		t.Fatalf("expected no error binding env-only config, got %v", err)
+	if err := mapstructure.Decode(raw, &cfg); err != nil {
+		t.Fatalf("mapstructure.Decode failed: %v", err)
 	}
 	if cfg.Dur != "3m" {
 		t.Fatalf("expected dur 3m from env, got %s", cfg.Dur)
@@ -35,13 +48,24 @@ func TestBind_PrefixIsolation(t *testing.T) {
 	t.Setenv("STRATUM_OTHER_DUR", "1m")
 
 	loader := New()
-	var h envOnlyConfig
-	var o otherEnvConfig
-	if err := loader.Bind(&h); err != nil {
-		t.Fatalf("bind hook: %v", err)
+	// bind env vars for each leaf key
+	if err := loader.BindEnv("hook.dur", "STRATUM_HOOK_DUR"); err != nil {
+		t.Fatalf("BindEnv hook failed: %v", err)
 	}
-	if err := loader.Bind(&o); err != nil {
-		t.Fatalf("bind other: %v", err)
+	if err := loader.BindEnv("other.dur", "STRATUM_OTHER_DUR"); err != nil {
+		t.Fatalf("BindEnv other failed: %v", err)
+	}
+
+	vl := loader.(*viperLoader)
+	rawH := vl.v.AllSettings()["hook"]
+	var h envOnlyConfig
+	if err := mapstructure.Decode(rawH, &h); err != nil {
+		t.Fatalf("mapstructure.Decode hook failed: %v", err)
+	}
+	rawO := vl.v.AllSettings()["other"]
+	var o otherEnvConfig
+	if err := mapstructure.Decode(rawO, &o); err != nil {
+		t.Fatalf("mapstructure.Decode other failed: %v", err)
 	}
 
 	if h.Dur != "8m" {

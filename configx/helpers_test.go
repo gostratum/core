@@ -1,9 +1,7 @@
 package configx
 
 import (
-	"reflect"
 	"testing"
-	"time"
 
 	"github.com/spf13/viper"
 )
@@ -51,44 +49,3 @@ func TestSetNested_OverwriteNonMap(t *testing.T) {
 	}
 }
 
-func TestWalkFields_WalksNestedAndRespectsTime(t *testing.T) {
-	type Inner struct {
-		ID int       `mapstructure:"id"`
-		T  time.Time `mapstructure:"t"`
-	}
-	type Top struct {
-		Name  string `mapstructure:"name"`
-		Inner Inner  `mapstructure:"inner"`
-		skip  string // unexported should be ignored
-	}
-
-	var keys []string
-	err := walkFields(&Top{}, func(fullKey string, parts []string, f reflect.StructField) error {
-		keys = append(keys, fullKey)
-		return nil
-	}, "pref")
-	if err != nil {
-		t.Fatalf("walkFields returned error: %v", err)
-	}
-
-	want := map[string]bool{
-		"pref.name":     false,
-		"pref.inner.id": false,
-		"pref.inner.t":  false,
-	}
-	for _, k := range keys {
-		if _, ok := want[k]; ok {
-			want[k] = true
-		}
-	}
-	for k, seen := range want {
-		if !seen {
-			t.Fatalf("expected key %s to be walked, but it was not", k)
-		}
-	}
-
-	// Non-pointer props should return an error
-	if err := walkFields(Top{}, func(fullKey string, parts []string, f reflect.StructField) error { return nil }, "x"); err == nil {
-		t.Fatalf("expected error when calling walkFields with non-pointer, got nil")
-	}
-}
