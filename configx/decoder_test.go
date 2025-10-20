@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
 )
 
@@ -21,7 +22,13 @@ func TestBind_DurationSliceAndTime(t *testing.T) {
 	v.Set("hook.tags", "a,b,c")
 	v.Set("hook.when", "2020-01-02T15:04:05Z")
 
-	loader := &viperLoader{v: v}
+	// Create loader with decode hooks
+	decodeHook := mapstructure.ComposeDecodeHookFunc(
+		mapstructure.StringToTimeDurationHookFunc(),
+		mapstructure.StringToSliceHookFunc(","),
+		strToRFC3339TimeHook,
+	)
+	loader := &viperLoader{v: v, decodeHook: decodeHook}
 	var cfg hookConfig
 	if err := loader.Bind(&cfg); err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -41,7 +48,14 @@ func TestBind_DurationSliceAndTime(t *testing.T) {
 func TestBind_EmptyTime(t *testing.T) {
 	v := viper.New()
 	v.Set("hook.when", "")
-	loader := &viperLoader{v: v}
+
+	// Create loader with decode hooks
+	decodeHook := mapstructure.ComposeDecodeHookFunc(
+		mapstructure.StringToTimeDurationHookFunc(),
+		mapstructure.StringToSliceHookFunc(","),
+		strToRFC3339TimeHook,
+	)
+	loader := &viperLoader{v: v, decodeHook: decodeHook}
 	var cfg hookConfig
 	if err := loader.Bind(&cfg); err != nil {
 		t.Fatalf("expected no error for empty time, got %v", err)

@@ -2,8 +2,6 @@ package configx
 
 import (
 	"testing"
-
-	"github.com/mitchellh/mapstructure"
 )
 
 // envHookConfig is defined in new_test.go; redefine a small type here for isolation
@@ -19,27 +17,22 @@ type otherEnvConfig struct {
 
 func (o *otherEnvConfig) Prefix() string { return "other" }
 
-func TestBind_PicksUpEnvWhenNoFile(t *testing.T) {
+func TestBind_PicksUpEnvWithAutomaticEnv(t *testing.T) {
 	t.Setenv("STRATUM_HOOK_DUR", "3m")
 
 	loader := New()
-	// Explicitly bind the viper key to the environment variable since
-	// automatic reflection-based binding was removed.
+	// Modules must explicitly bind env keys for sensitive/env-only fields
 	if err := loader.BindEnv("hook.dur", "STRATUM_HOOK_DUR"); err != nil {
 		t.Fatalf("BindEnv failed: %v", err)
 	}
 
-	// Decode directly from viper's settings map: Bind no longer merges
-	// env-only values into UnmarshalKey, so tests must read from the
-	// viper instance directly.
-	vl := loader.(*viperLoader)
-	raw := vl.v.AllSettings()["hook"]
 	var cfg envOnlyConfig
-	if err := mapstructure.Decode(raw, &cfg); err != nil {
-		t.Fatalf("mapstructure.Decode failed: %v", err)
+	if err := loader.Bind(&cfg); err != nil {
+		t.Fatalf("Bind failed: %v", err)
 	}
+
 	if cfg.Dur != "3m" {
-		t.Fatalf("expected dur 3m from env, got %s", cfg.Dur)
+		t.Fatalf("expected dur 3m from env (STRATUM_HOOK_DUR), got %s", cfg.Dur)
 	}
 }
 
@@ -48,7 +41,7 @@ func TestBind_PrefixIsolation(t *testing.T) {
 	t.Setenv("STRATUM_OTHER_DUR", "1m")
 
 	loader := New()
-	// bind env vars for each leaf key
+	// Explicitly bind env keys for both prefixes
 	if err := loader.BindEnv("hook.dur", "STRATUM_HOOK_DUR"); err != nil {
 		t.Fatalf("BindEnv hook failed: %v", err)
 	}
@@ -56,16 +49,14 @@ func TestBind_PrefixIsolation(t *testing.T) {
 		t.Fatalf("BindEnv other failed: %v", err)
 	}
 
-	vl := loader.(*viperLoader)
-	rawH := vl.v.AllSettings()["hook"]
 	var h envOnlyConfig
-	if err := mapstructure.Decode(rawH, &h); err != nil {
-		t.Fatalf("mapstructure.Decode hook failed: %v", err)
+	if err := loader.Bind(&h); err != nil {
+		t.Fatalf("Bind hook failed: %v", err)
 	}
-	rawO := vl.v.AllSettings()["other"]
+
 	var o otherEnvConfig
-	if err := mapstructure.Decode(rawO, &o); err != nil {
-		t.Fatalf("mapstructure.Decode other failed: %v", err)
+	if err := loader.Bind(&o); err != nil {
+		t.Fatalf("Bind other failed: %v", err)
 	}
 
 	if h.Dur != "8m" {
@@ -73,5 +64,26 @@ func TestBind_PrefixIsolation(t *testing.T) {
 	}
 	if o.Dur != "1m" {
 		t.Fatalf("expected other dur 1m, got %s", o.Dur)
+	}
+}
+
+// TestBind_ExplicitBindEnvWithCustomEnvVarName verifies that explicit BindEnv
+// can bind custom environment variable names (in addition to standard STRATUM_ prefix)
+func TestBind_ExplicitBindEnvWithCustomEnvVarName(t *testing.T) {
+	t.Setenv("CUSTOM_DUR_VAR", "5m")
+
+	loader := New()
+	// Bind a custom environment variable name
+	if err := loader.BindEnv("hook.dur", "CUSTOM_DUR_VAR"); err != nil {
+		t.Fatalf("BindEnv failed: %v", err)
+	}
+
+	var cfg envOnlyConfig
+	if err := loader.Bind(&cfg); err != nil {
+		t.Fatalf("Bind failed: %v", err)
+	}
+
+	if cfg.Dur != "5m" {
+		t.Fatalf("expected dur 5m from custom env var, got %s", cfg.Dur)
 	}
 }
