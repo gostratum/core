@@ -6,6 +6,13 @@ import (
 	"testing"
 )
 
+type AppConfig struct {
+	Port int    `mapstructure:"port"`
+	Host string `mapstructure:"host"`
+}
+
+func (AppConfig) Prefix() string { return "app" }
+
 func writeYAML(path, content string) error {
 	return os.WriteFile(path, []byte(content), 0644)
 }
@@ -23,14 +30,18 @@ func TestNew_MergeInConfigBaseAndEnv(t *testing.T) {
 
 	t.Setenv("CONFIG_PATHS", dir)
 	t.Setenv("APP_ENV", "dev")
-
 	loader := New()
-	vl := loader.(*viperLoader)
-	// ensure the merged values are present via viper
-	if vl.v.GetInt("app.port") != 9000 {
-		t.Fatalf("expected port 9000 from env merge, got %d", vl.v.GetInt("app.port"))
+
+	// Use public Loader API: bind into a typed struct with Prefix "app"
+	var cfg = &AppConfig{}
+	if err := loader.Bind(cfg); err != nil {
+		t.Fatalf("Bind failed: %v", err)
 	}
-	if vl.v.GetString("app.host") != "envhost" {
-		t.Fatalf("expected host envhost from env merge, got %s", vl.v.GetString("app.host"))
+
+	if cfg.Port != 9000 {
+		t.Fatalf("expected port 9000 from env merge, got %d", cfg.Port)
+	}
+	if cfg.Host != "envhost" {
+		t.Fatalf("expected host envhost from env merge, got %s", cfg.Host)
 	}
 }

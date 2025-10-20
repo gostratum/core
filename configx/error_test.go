@@ -1,10 +1,10 @@
 package configx
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
-
-	"github.com/spf13/viper"
 )
 
 type badTimeConfig struct {
@@ -14,9 +14,12 @@ type badTimeConfig struct {
 func (b *badTimeConfig) Prefix() string { return "bad" }
 
 func TestBind_BadTimeFormat(t *testing.T) {
-	v := viper.New()
-	v.Set("bad.when_any", "not-a-time")
-	loader := &viperLoader{v: v}
+	dir := t.TempDir()
+	content := "bad:\n  when_any: not-a-time\n"
+	if err := os.WriteFile(filepath.Join(dir, "base.yaml"), []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to write base.yaml: %v", err)
+	}
+	loader := New(WithConfigPaths(dir))
 	var cfg badTimeConfig
 	if err := loader.Bind(&cfg); err == nil {
 		t.Fatalf("expected error decoding bad time, got nil")

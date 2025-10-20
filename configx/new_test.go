@@ -1,9 +1,9 @@
 package configx
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
-
-	"github.com/spf13/viper"
 )
 
 type envHookConfig struct {
@@ -13,16 +13,18 @@ type envHookConfig struct {
 func (e *envHookConfig) Prefix() string { return "hook" }
 
 func TestNew_PicksUpEnvOverrides(t *testing.T) {
-	v := viper.New()
-	// Simulate config file value directly so Sub() will find it.
-	v.Set("hook.dur", "2m")
+	dir := t.TempDir()
+	content := "hook:\n  dur: 2m\n"
+	if err := os.WriteFile(filepath.Join(dir, "base.yaml"), []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to write base.yaml: %v", err)
+	}
 
-	loader := &viperLoader{v: v}
+	loader := New(WithConfigPaths(dir))
 	var cfg envHookConfig
 	if err := loader.Bind(&cfg); err != nil {
-		t.Fatalf("expected bind to succeed with env override, got %v", err)
+		t.Fatalf("expected bind to succeed with file value, got %v", err)
 	}
 	if cfg.Dur != "2m" {
-		t.Fatalf("expected dur 2m from env, got %s", cfg.Dur)
+		t.Fatalf("expected dur 2m from file, got %s", cfg.Dur)
 	}
 }

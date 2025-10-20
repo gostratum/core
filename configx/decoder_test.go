@@ -1,11 +1,12 @@
 package configx
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/mitchellh/mapstructure"
-	"github.com/spf13/viper"
 )
 
 type hookConfig struct {
@@ -17,10 +18,11 @@ type hookConfig struct {
 func (h *hookConfig) Prefix() string { return "hook" }
 
 func TestBind_DurationSliceAndTime(t *testing.T) {
-	v := viper.New()
-	v.Set("hook.dur", "1m")
-	v.Set("hook.tags", "a,b,c")
-	v.Set("hook.when", "2020-01-02T15:04:05Z")
+	dir := t.TempDir()
+	content := "hook:\n  dur: 1m\n  tags: a,b,c\n  when: 2020-01-02T15:04:05Z\n"
+	if err := os.WriteFile(filepath.Join(dir, "base.yaml"), []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to write base.yaml: %v", err)
+	}
 
 	// Create loader with decode hooks
 	decodeHook := mapstructure.ComposeDecodeHookFunc(
@@ -28,7 +30,7 @@ func TestBind_DurationSliceAndTime(t *testing.T) {
 		mapstructure.StringToSliceHookFunc(","),
 		strToRFC3339TimeHook,
 	)
-	loader := &viperLoader{v: v, decodeHook: decodeHook}
+	loader := New(WithConfigPaths(dir), WithDecodeHook(decodeHook))
 	var cfg hookConfig
 	if err := loader.Bind(&cfg); err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -46,8 +48,11 @@ func TestBind_DurationSliceAndTime(t *testing.T) {
 }
 
 func TestBind_EmptyTime(t *testing.T) {
-	v := viper.New()
-	v.Set("hook.when", "")
+	dir := t.TempDir()
+	content := "hook:\n  when: \n"
+	if err := os.WriteFile(filepath.Join(dir, "base.yaml"), []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to write base.yaml: %v", err)
+	}
 
 	// Create loader with decode hooks
 	decodeHook := mapstructure.ComposeDecodeHookFunc(
@@ -55,7 +60,7 @@ func TestBind_EmptyTime(t *testing.T) {
 		mapstructure.StringToSliceHookFunc(","),
 		strToRFC3339TimeHook,
 	)
-	loader := &viperLoader{v: v, decodeHook: decodeHook}
+	loader := New(WithConfigPaths(dir), WithDecodeHook(decodeHook))
 	var cfg hookConfig
 	if err := loader.Bind(&cfg); err != nil {
 		t.Fatalf("expected no error for empty time, got %v", err)

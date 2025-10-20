@@ -1,9 +1,9 @@
 package configx
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
-
-	"github.com/spf13/viper"
 )
 
 // sample config that implements Configurable
@@ -15,11 +15,13 @@ type sampleConfig struct {
 func (s *sampleConfig) Prefix() string { return "test" }
 
 func TestBind_Success(t *testing.T) {
-	v := viper.New()
-	v.Set("test.host", "example.com")
-	v.Set("test.port", 9000)
+	dir := t.TempDir()
+	content := "test:\n  host: example.com\n  port: 9000\n"
+	if err := os.WriteFile(filepath.Join(dir, "base.yaml"), []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to write base.yaml: %v", err)
+	}
 
-	loader := &viperLoader{v: v}
+	loader := New(WithConfigPaths(dir))
 	var cfg sampleConfig
 	if err := loader.Bind(&cfg); err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -34,9 +36,8 @@ func TestBind_Success(t *testing.T) {
 }
 
 func TestBind_ValidationFail(t *testing.T) {
-	v := viper.New()
 	// no values set -> validation should fail for required field
-	loader := &viperLoader{v: v}
+	loader := New()
 	var c cfg2
 	if err := loader.Bind(&c); err == nil {
 		t.Fatalf("expected validation error, got nil")

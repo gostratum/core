@@ -2,8 +2,6 @@ package configx
 
 import (
 	"testing"
-
-	"github.com/spf13/viper"
 )
 
 type defaultsConfig struct {
@@ -13,8 +11,7 @@ type defaultsConfig struct {
 func (d *defaultsConfig) Prefix() string { return "doesnotexist" }
 
 func TestBind_SubNilAppliesDefaults(t *testing.T) {
-	v := viper.New()
-	loader := &viperLoader{v: v}
+	loader := New()
 	var cfg defaultsConfig
 	// Current implementation does not apply defaults for a missing subtree
 	// in a way that satisfies validation. Expect a validation error.
