@@ -106,3 +106,58 @@ func TestLoader_MultipleBindSameConfig(t *testing.T) {
 
 	assert.Equal(t, cfg1.Port, cfg2.Port)
 }
+
+func TestNew_EnvPrefixPrecedence(t *testing.T) {
+	t.Run("default STRATUM prefix", func(t *testing.T) {
+		t.Setenv("STRATUM_TEST_VALUE", "from_stratum")
+
+		loader := New()
+		require.NoError(t, loader.BindEnv("test.value"))
+
+		cfg := &testConfig{}
+		err := loader.Bind(cfg)
+		require.NoError(t, err)
+		assert.Equal(t, "from_stratum", cfg.Value)
+	})
+
+	t.Run("ENV_PREFIX overrides default", func(t *testing.T) {
+		t.Setenv("ENV_PREFIX", "MYAPP")
+		t.Setenv("MYAPP_TEST_VALUE", "from_myapp")
+		t.Setenv("STRATUM_TEST_VALUE", "from_stratum")
+
+		loader := New()
+		require.NoError(t, loader.BindEnv("test.value"))
+
+		cfg := &testConfig{}
+		err := loader.Bind(cfg)
+		require.NoError(t, err)
+		assert.Equal(t, "from_myapp", cfg.Value)
+	})
+
+	t.Run("WithEnvPrefix option overrides ENV_PREFIX", func(t *testing.T) {
+		t.Setenv("ENV_PREFIX", "MYAPP")
+		t.Setenv("CUSTOM_TEST_VALUE", "from_custom")
+		t.Setenv("MYAPP_TEST_VALUE", "from_myapp")
+		t.Setenv("STRATUM_TEST_VALUE", "from_stratum")
+
+		loader := New(WithEnvPrefix("CUSTOM"))
+		require.NoError(t, loader.BindEnv("test.value"))
+
+		cfg := &testConfig{}
+		err := loader.Bind(cfg)
+		require.NoError(t, err)
+		assert.Equal(t, "from_custom", cfg.Value)
+	})
+
+	t.Run("WithEnvPrefix with empty ENV_PREFIX", func(t *testing.T) {
+		t.Setenv("CUSTOM_TEST_VALUE", "from_custom")
+
+		loader := New(WithEnvPrefix("CUSTOM"))
+		require.NoError(t, loader.BindEnv("test.value"))
+
+		cfg := &testConfig{}
+		err := loader.Bind(cfg)
+		require.NoError(t, err)
+		assert.Equal(t, "from_custom", cfg.Value)
+	})
+}

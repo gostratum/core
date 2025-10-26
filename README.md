@@ -71,10 +71,45 @@ GoStratum's `configx` package provides **typed configuration loading** with auto
 
 Configuration values are loaded with the following precedence (highest to lowest):
 
-1. **Environment Variables** - `STRATUM_*` prefixed (customizable)
+1. **Environment Variables** - `STRATUM_*` prefixed by default (customizable via `ENV_PREFIX` or `WithEnvPrefix()`)
 2. **Environment-Specific Config** - `{APP_ENV}.yaml` (e.g., `prod.yaml`, `dev.yaml`)  
 3. **Base Config File** - `base.yaml`
 4. **Struct Tag Defaults** - `default:"value"` tags
+
+### Environment Prefix Configuration
+
+The environment variable prefix can be set in three ways (in order of precedence):
+
+1. **`WithEnvPrefix()` option** (highest priority)
+2. **`ENV_PREFIX` environment variable** (global default)
+3. **`STRATUM`** (hardcoded default)
+
+```go
+// Option 1: Via WithEnvPrefix() - highest priority
+loader := configx.New(
+    configx.WithEnvPrefix("MYAPP"),
+)
+// Uses MYAPP_APP_PORT
+
+// Option 2: Via ENV_PREFIX environment variable - global default
+// export ENV_PREFIX=MYAPP
+loader := configx.New()
+// Uses MYAPP_APP_PORT
+
+// Option 3: Default behavior (no ENV_PREFIX set, no WithEnvPrefix)
+loader := configx.New()
+// Uses STRATUM_APP_PORT
+```
+
+This allows deployment scripts to set a global prefix without code changes:
+
+```bash
+# Deployment script
+export ENV_PREFIX=MYAPP
+export MYAPP_APP_PORT=8080
+export MYAPP_DB_HOST=prod-db.example.com
+./myapp
+```
 
 ### Quick Start
 
@@ -263,9 +298,15 @@ If validation fails, `Bind()` returns a descriptive error.
 
 ### Environment Variables
 
+- `ENV_PREFIX`: Override default environment variable prefix (default: `STRATUM`)
 - `CONFIG_PATHS`: Comma-separated config directories (default: `./configs`)
 - `APP_ENV`: Environment name for loading `{APP_ENV}.yaml`
-- `STRATUM_*`: Configuration values (prefix customizable via `WithEnvPrefix`)
+- `STRATUM_*` (or `{ENV_PREFIX}_*`): Configuration values
+
+**Precedence for environment prefix:**
+1. `WithEnvPrefix()` option (code)
+2. `ENV_PREFIX` environment variable
+3. `STRATUM` (default)
 
 ### Complete Example
 

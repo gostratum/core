@@ -16,15 +16,21 @@ type viperLoader struct {
 	v          *viper.Viper
 	decodeHook mapstructure.DecodeHookFunc
 	boundKeys  map[string]bool
+	envPrefix  string
 }
 
 // New creates a new Loader with optional configuration.
 //
 // Configuration Precedence (highest to lowest):
-//  1. Environment variables (STRATUM_* by default)
+//  1. Environment variables (customizable prefix, see below)
 //  2. Environment-specific config file ({APP_ENV}.yaml)
 //  3. Base config file (base.yaml)
 //  4. Struct tag defaults (default:"value")
+//
+// Environment Prefix Precedence (highest to lowest):
+//  1. WithEnvPrefix() option (in code)
+//  2. ENV_PREFIX environment variable (global default)
+//  3. "STRATUM" (hardcoded default)
 //
 // Configuration paths can be set via:
 //   - CONFIG_PATHS environment variable (comma-separated)
@@ -32,10 +38,17 @@ type viperLoader struct {
 //
 // Example:
 //
+//	// Option 1: Use ENV_PREFIX environment variable
+//	// export ENV_PREFIX=MYAPP
+//	loader := configx.New()
+//	// Uses MYAPP_* environment variables
+//
+//	// Option 2: Use WithEnvPrefix() option (highest priority)
 //	loader := configx.New(
 //	    configx.WithConfigPaths("./config"),
 //	    configx.WithEnvPrefix("MYAPP"),
 //	)
+//	// Uses MYAPP_* environment variables
 func New(opts ...Option) Loader {
 	cfg := &LoaderConfig{
 		ConfigPaths: []string{DefaultConfigPath},
@@ -46,6 +59,11 @@ func New(opts ...Option) Loader {
 			mapstructure.StringToSliceHookFunc(","),
 			strToRFC3339TimeHook,
 		),
+	}
+
+	// Check ENV_PREFIX env var for global prefix override
+	if envPrefix := strings.TrimSpace(os.Getenv(EnvPrefix)); envPrefix != "" {
+		cfg.EnvPrefix = envPrefix
 	}
 
 	// Check CONFIG_PATHS env var for backward compatibility
@@ -93,6 +111,7 @@ func New(opts ...Option) Loader {
 		v:          v,
 		decodeHook: cfg.DecodeHooks,
 		boundKeys:  make(map[string]bool),
+		envPrefix:  cfg.EnvPrefix,
 	}
 }
 
@@ -172,14 +191,50 @@ func (l *viperLoader) BindEnv(key string, envVars ...string) error {
 		return fmt.Errorf("cannot bind empty key")
 	}
 
-	var err error
-	if len(envVars) == 0 {
-		err = l.v.BindEnv(normalizedKey)
-	} else {
-		err = l.v.BindEnv(append([]string{normalizedKey}, envVars...)...)
+	// Build env var names using a replacer that mirrors how we convert viper keys
+	// into env var names (dot and dash become underscores, then upper-cased).
+	replacer := strings.NewReplacer(".", "_", "-", "_")
+	makeEnv := func(k string) string {
+		return strings.ToUpper(replacer.Replace(k))
 	}
 
-	if err != nil {
+	// Unprefixed env var name (e.g. db.databases.primary.dsn -> DB_DATABASES_PRIMARY_DSN)
+	unprefixed := makeEnv(normalizedKey)
+
+	// Prefixed env var name using the loader's resolved prefix (if any)
+	var prefixed string
+	if p := strings.TrimSpace(l.envPrefix); p != "" {
+		prefixed = strings.ToUpper(p) + "_" + unprefixed
+	}
+
+	// Build final argument list for viper.BindEnv: first the key, then one or more
+	// explicit env var names. If the caller provided envVars, ensure the prefixed
+	// alias is also present (so callers don't need to hardcode the prefix).
+	args := []string{normalizedKey}
+	if len(envVars) == 0 {
+		// No explicit aliases: bind both unprefixed and prefixed (if available).
+		args = append(args, unprefixed)
+		if prefixed != "" {
+			args = append(args, prefixed)
+		}
+	} else {
+		// Use caller-provided aliases but add the computed prefixed alias if missing.
+		args = append(args, envVars...)
+		if prefixed != "" {
+			found := false
+			for _, v := range envVars {
+				if strings.EqualFold(v, prefixed) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				args = append(args, prefixed)
+			}
+		}
+	}
+
+	if err := l.v.BindEnv(args...); err != nil {
 		return fmt.Errorf("failed to bind env for key '%s': %w", normalizedKey, err)
 	}
 
