@@ -30,18 +30,18 @@ func TestIsStdStream(t *testing.T) {
 }
 
 func TestNewLogger_SmallConfigs(t *testing.T) {
-	// Instead of invoking NewLogger (which appends hooks into an fx.Lifecycle),
-	// test the small helpers and conversions that don't rely on fx lifecycle.
-	// Create a nop logger and ensure NewSugared and FxEventLogger adapt it.
+	// Test the FxEventLogger adapter
 	// Create a zap nop logger for adapter consumers
 	z := zap.NewNop()
-	sug := NewSugared(z)
-	if sug == nil {
-		t.Fatalf("expected non-nil sugared logger")
-	}
 	ev := FxEventLogger(z)
 	if ev == nil {
 		t.Fatalf("expected non-nil fx event logger")
+	}
+
+	// Test sugared logger directly
+	sug := z.Sugar()
+	if sug == nil {
+		t.Fatalf("expected non-nil sugared logger")
 	}
 }
 

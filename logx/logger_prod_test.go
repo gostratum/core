@@ -15,7 +15,7 @@ func TestLoggerModule_ProdConfig(t *testing.T) {
 	app := fxtest.New(
 		t,
 		fx.Provide(func() LoggerConfig { return cfg }),
-		fx.Provide(NewLogger, NewSugared),
+		fx.Provide(NewLogger),
 		fx.WithLogger(FxEventLogger),
 		fx.Invoke(func(l *zap.Logger) {
 			if l == nil {

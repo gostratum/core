@@ -94,8 +94,6 @@ func NewLogger(lc fx.Lifecycle, c LoggerConfig) (*zap.Logger, error) {
 	return logger, nil
 }
 
-func NewSugared(l *zap.Logger) *zap.SugaredLogger { return l.Sugar() }
-
 func ifEmpty(s, d string) string {
 	if s == "" {
 		return d

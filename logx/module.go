@@ -14,7 +14,6 @@ func Module() fx.Option {
 			NewLoggerConfig,
 			NewLogger,
 			ProvideAdapter,
-			NewSugared,
 		),
 		fx.WithLogger(FxEventLogger),
 	)
