@@ -6,7 +6,6 @@ import (
 
 	"github.com/gostratum/core/configx"
 	"go.uber.org/fx"
-	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -97,20 +96,6 @@ func NewLogger(lc fx.Lifecycle, c LoggerConfig) (*zap.Logger, error) {
 
 func NewSugared(l *zap.Logger) *zap.SugaredLogger { return l.Sugar() }
 
-func FxEventLogger(l *zap.Logger) fxevent.Logger { return &fxevent.ZapLogger{Logger: l} }
-
-func Module() fx.Option {
-	return fx.Module(
-		"logx",
-		fx.Provide(
-			NewLoggerConfig,
-			NewLogger,
-			ProvideAdapter,
-			NewSugared,
-		),
-		fx.WithLogger(FxEventLogger),
-	)
-}
 func ifEmpty(s, d string) string {
 	if s == "" {
 		return d
