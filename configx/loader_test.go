@@ -1,6 +1,8 @@
 package configx
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -160,4 +162,22 @@ func TestNew_EnvPrefixPrecedence(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "from_custom", cfg.Value)
 	})
+}
+
+func TestNew_CoreConfigEnvPrefix(t *testing.T) {
+	dir := t.TempDir()
+	content := "core:\n  config:\n    env_prefix: CONFIGPREFIX\n"
+	if err := os.WriteFile(filepath.Join(dir, "base.yaml"), []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to write base.yaml: %v", err)
+	}
+
+	t.Setenv("CONFIGPREFIX_TEST_VALUE", "from_configprefix")
+
+	loader := New(WithConfigPaths(dir))
+	require.NoError(t, loader.BindEnv("test.value"))
+
+	cfg := &testConfig{}
+	err := loader.Bind(cfg)
+	require.NoError(t, err)
+	assert.Equal(t, "from_configprefix", cfg.Value)
 }

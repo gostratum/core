@@ -10,6 +10,7 @@ import (
 func New(opts ...fx.Option) *fx.App {
 	return fx.New(
 		fx.Provide(configx.New),
+		fx.Provide(configx.NewConfig),
 		logx.Module(),
 		fx.Provide(NewHealthRegistry),
 		fx.Options(opts...),

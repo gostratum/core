@@ -61,11 +61,6 @@ func New(opts ...Option) Loader {
 		),
 	}
 
-	// Check ENV_PREFIX env var for global prefix override
-	if envPrefix := strings.TrimSpace(os.Getenv(EnvPrefix)); envPrefix != "" {
-		cfg.EnvPrefix = envPrefix
-	}
-
 	// Check CONFIG_PATHS env var for backward compatibility
 	if paths := strings.TrimSpace(os.Getenv(EnvConfigPaths)); paths != "" {
 		pathList := []string{}
@@ -102,10 +97,25 @@ func New(opts ...Option) Loader {
 		_ = v.MergeInConfig()
 	}
 
+	if envPrefix := v.GetString("core.config.env_prefix"); envPrefix != "" {
+		cfg.EnvPrefix = envPrefix
+	}
+
+	// Check ENV_PREFIX env var for global prefix override
+	if envPrefix := strings.TrimSpace(os.Getenv(EnvPrefix)); envPrefix != "" {
+		cfg.EnvPrefix = envPrefix
+	}
+
 	// Environment variable override
 	v.SetEnvPrefix(cfg.EnvPrefix)
 	v.SetEnvKeyReplacer(cfg.EnvReplacer)
 	v.AutomaticEnv()
+
+	// Apply WithEnvPrefix override (highest priority)
+	if cfg.OverrideEnvPrefix != "" {
+		cfg.EnvPrefix = cfg.OverrideEnvPrefix
+		v.SetEnvPrefix(cfg.EnvPrefix)
+	}
 
 	return &viperLoader{
 		v:          v,

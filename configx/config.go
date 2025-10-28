@@ -25,3 +25,16 @@ type Loader interface {
 type Configurable interface {
 	Prefix() string
 }
+
+type Config struct {
+	EnvPrefix string `mapstructure:"env_prefix"`
+}
+
+func (Config) Prefix() string {
+	return "core.config"
+}
+
+func NewConfig(loader Loader) (Config, error) {
+	var c Config
+	return c, loader.Bind(&c)
+}

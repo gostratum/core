@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 // sample config that implements Configurable
@@ -50,3 +52,45 @@ type cfg2 struct {
 }
 
 func (c *cfg2) Prefix() string { return "missing" }
+
+func TestNewConfig(t *testing.T) {
+	loader := New()
+	config, err := NewConfig(loader)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	// Default should be empty
+	if config.EnvPrefix != "" {
+		t.Fatalf("expected empty EnvPrefix, got %s", config.EnvPrefix)
+	}
+}
+
+func TestNewConfig_WithEnv(t *testing.T) {
+	loader := New()
+	require.NoError(t, loader.BindEnv("core.config.env_prefix", "STRATUM_CORE_CONFIG_ENV_PREFIX"))
+	t.Setenv("STRATUM_CORE_CONFIG_ENV_PREFIX", "TESTPREFIX")
+	config, err := NewConfig(loader)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if config.EnvPrefix != "TESTPREFIX" {
+		t.Fatalf("expected EnvPrefix TESTPREFIX, got %s", config.EnvPrefix)
+	}
+}
+
+func TestNewConfig_WithConfigFile(t *testing.T) {
+	dir := t.TempDir()
+	content := "core:\n  config:\n    env_prefix: FILEPREFIX\n"
+	if err := os.WriteFile(filepath.Join(dir, "base.yaml"), []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to write base.yaml: %v", err)
+	}
+
+	loader := New(WithConfigPaths(dir))
+	config, err := NewConfig(loader)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if config.EnvPrefix != "FILEPREFIX" {
+		t.Fatalf("expected EnvPrefix FILEPREFIX, got %s", config.EnvPrefix)
+	}
+}

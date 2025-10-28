@@ -23,6 +23,16 @@ func TestAppStartStop(t *testing.T) {
 	defer app.RequireStart().RequireStop()
 }
 
+// TestNewProvidesCoreConfig verifies that core.New() provides the core config and runs without issues.
+func TestNewProvidesCoreConfig(t *testing.T) {
+	app := core.New()
+	// Just test that it builds and can start/stop without the config causing issues
+	go func() {
+		app.Run()
+	}()
+	app.Stop(context.Background())
+}
+
 // TestHealthRegistry verifies basic health check registration and aggregation.
 func TestHealthRegistry(t *testing.T) {
 	registry := core.NewHealthRegistry()

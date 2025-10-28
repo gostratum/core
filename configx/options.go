@@ -11,10 +11,11 @@ type Option func(*LoaderConfig)
 
 // LoaderConfig holds configuration for creating a Loader.
 type LoaderConfig struct {
-	ConfigPaths []string
-	EnvPrefix   string
-	EnvReplacer *strings.Replacer
-	DecodeHooks mapstructure.DecodeHookFunc
+	ConfigPaths       []string
+	EnvPrefix         string
+	OverrideEnvPrefix string
+	EnvReplacer       *strings.Replacer
+	DecodeHooks       mapstructure.DecodeHookFunc
 }
 
 // WithConfigPaths sets the configuration paths for the Loader.
@@ -45,7 +46,7 @@ func WithConfigPaths(paths ...string) Option {
 func WithEnvPrefix(prefix string) Option {
 	return func(cfg *LoaderConfig) {
 		if prefix != "" {
-			cfg.EnvPrefix = prefix
+			cfg.OverrideEnvPrefix = prefix
 		}
 	}
 }
