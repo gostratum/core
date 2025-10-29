@@ -2,13 +2,35 @@
 
 ## [Unreleased]
 
-## [0.1.10] - 2025-10-26
+## [0.2.0] - 2025-10-29
 
 ### Added
-- Release version 0.1.10
+- Core module: implemented `New` and `Run` helpers to simplify creating an Fx-based application (New Fx app composition helpers).
+- Configuration improvements: added `configx` package and a typed configuration loader with validation and environment variable binding.
+- Sanitization: added sanitization utilities and tests for sensitive data handling.
+- Version management: release/version management scripts and Makefile targets to streamline releases and bumping versions.
 
 ### Changed
-- Updated gostratum dependencies to latest versions
+- Replace previous logger module with `logx` and refactor logging initialization to use `zap.Sugar` where applicable.
+- Configuration loader enhancements: loader options, environment variable binding precedence, and file-based test configuration for clearer tests.
+- Migrate several internal providers and Fx initialization to separate concerns (logger, config, lifecycle providers).
+
+### Fixed
+- Ensure custom time encoder is only set when necessary in `NewLogger`.
+- Update Go toolchain version to 1.25.1 in `go.mod` files where applicable.
+
+### Refactored
+- Removed `NewSugared` helper from logger; callers now construct `zap.Sugar` explicitly.
+- Extracted and moved `FxEventLogger` out of `logger.go` into `module.go` to improve module boundaries.
+- Simplified configuration handling by removing legacy `walkFields` utility and replacing certain viper usages in tests with explicit file-based config for clarity and maintainability.
+
+### Tests
+- Added integration tests for configuration binding and alias precedence.
+- Added unit tests for `configx` and `logx` modules and improved test coverage for logger functionality.
+
+### Docs
+- README and deployment documentation updated to document `ENV_PREFIX` and the new release flow.
+
 
 
 # Changelog
