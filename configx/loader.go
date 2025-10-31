@@ -2,6 +2,7 @@ package configx
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -123,6 +124,91 @@ func New(opts ...Option) Loader {
 		boundKeys:  make(map[string]bool),
 		envPrefix:  cfg.EnvPrefix,
 	}
+}
+
+// NewWithReader creates a new Loader from an in-memory YAML source.
+// This is designed for testing and allows modules to inject configuration
+// without writing temporary files or duplicating YAML parsing logic.
+//
+// The returned loader has the same behavior as New():
+//   - Environment variable expansion (${VAR} syntax)
+//   - Same decode hooks (duration, time, slices)
+//   - Same validation and defaults
+//   - AutomaticEnv() enabled for env var overrides
+//
+// Configuration Precedence (highest to lowest):
+//  1. Environment variables (with configured prefix)
+//  2. YAML content from reader
+//  3. Struct tag defaults (default:"value")
+//
+// Example (in tests):
+//
+//	yaml := `
+//	http:
+//	  port: 8080
+//	  timeout: 30s
+//	`
+//	loader, err := configx.NewWithReader(strings.NewReader(yaml))
+//	require.NoError(t, err)
+//
+//	var cfg httpx.Config
+//	err = loader.Bind(&cfg)
+//	require.NoError(t, err)
+//	assert.Equal(t, 8080, cfg.Port)
+//	assert.Equal(t, 30*time.Second, cfg.Timeout)
+func NewWithReader(r io.Reader, opts ...Option) (Loader, error) {
+	// Apply same default configuration as New()
+	cfg := &LoaderConfig{
+		ConfigPaths: []string{DefaultConfigPath},
+		EnvPrefix:   DefaultEnvPrefix,
+		EnvReplacer: strings.NewReplacer(".", "_", "-", "_"),
+		DecodeHooks: mapstructure.ComposeDecodeHookFunc(
+			mapstructure.StringToTimeDurationHookFunc(),
+			mapstructure.StringToSliceHookFunc(","),
+			strToRFC3339TimeHook,
+		),
+	}
+
+	// Apply user options
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	v := viper.New()
+	v.SetConfigType("yaml")
+
+	// Read configuration from in-memory source
+	if err := v.ReadConfig(r); err != nil {
+		return nil, fmt.Errorf("failed to read config from reader: %w", err)
+	}
+
+	// Check for env_prefix in YAML config (for consistency with New())
+	if envPrefix := v.GetString("core.config.env_prefix"); envPrefix != "" {
+		cfg.EnvPrefix = envPrefix
+	}
+
+	// Check ENV_PREFIX env var for global prefix override
+	if envPrefix := strings.TrimSpace(os.Getenv(EnvPrefix)); envPrefix != "" {
+		cfg.EnvPrefix = envPrefix
+	}
+
+	// Environment variable override support
+	v.SetEnvPrefix(cfg.EnvPrefix)
+	v.SetEnvKeyReplacer(cfg.EnvReplacer)
+	v.AutomaticEnv()
+
+	// Apply WithEnvPrefix override (highest priority)
+	if cfg.OverrideEnvPrefix != "" {
+		cfg.EnvPrefix = cfg.OverrideEnvPrefix
+		v.SetEnvPrefix(cfg.EnvPrefix)
+	}
+
+	return &viperLoader{
+		v:          v,
+		decodeHook: cfg.DecodeHooks,
+		boundKeys:  make(map[string]bool),
+		envPrefix:  cfg.EnvPrefix,
+	}, nil
 }
 
 // Bind loads configuration into the provided struct.

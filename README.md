@@ -196,6 +196,44 @@ loader := configx.New(
 )
 ```
 
+### Testing with In-Memory Configuration
+
+For tests, use `NewWithReader()` to load configuration from in-memory YAML without writing files:
+
+```go
+import (
+    "strings"
+    "testing"
+    "github.com/gostratum/core/configx"
+    "github.com/stretchr/testify/require"
+)
+
+func TestMyConfig(t *testing.T) {
+    yaml := `
+app:
+  port: 8080
+  host: example.com
+  timeout: 30s
+`
+    loader, err := configx.NewWithReader(strings.NewReader(yaml))
+    require.NoError(t, err)
+    
+    var cfg AppConfig
+    err = loader.Bind(&cfg)
+    require.NoError(t, err)
+    
+    assert.Equal(t, 8080, cfg.Port)
+}
+```
+
+**Benefits of `NewWithReader()`:**
+- ✅ No filesystem I/O - faster tests
+- ✅ Same validation, decode hooks, and env var support as `New()`
+- ✅ Tests can run in parallel safely
+- ✅ Clear and readable test configuration
+
+See `docs/TESTING.md` for complete testing patterns.
+
 ### Configuration Sources
 
 #### 1. Environment Variables (Highest Priority)
