@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+
+## [0.2.2] - 2025-10-31
+
+### Added
+- Release version 0.2.2
+
+### Changed
+- Updated gostratum dependencies to latest versions
+
+
 ### Added
 - **logx.Sanitizable interface** - Automatic secret sanitization in logging
   - Configs implementing `Sanitizable` are automatically sanitized when logged with `logx.Any()`
