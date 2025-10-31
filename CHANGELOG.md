@@ -2,6 +2,28 @@
 
 ## [Unreleased]
 
+
+## [0.2.1] - 2025-10-31
+
+### Added
+- **configx.NewWithReader()** - In-memory YAML configuration loader for tests
+  - Load configuration from `io.Reader` without filesystem I/O
+  - Same decode hooks, validation, and env var support as production loader
+  - Perfect for unit tests - faster, more reliable, better isolation
+  - See `docs/TESTING.md` for usage patterns and best practices
+
+### Changed
+- None
+
+### Fixed
+- None
+
+### Documentation
+- Added `docs/TESTING.md` - Comprehensive testing guide for GoStratum modules
+- Updated core README with testing section and NewWithReader examples
+- Enhanced testing patterns documentation across framework
+
+
 ## [0.2.0] - 2025-10-29
 
 ### Added
