@@ -1,6 +1,7 @@
 package logx
 
 import (
+	"maps"
 	"strings"
 
 	"go.uber.org/zap"
@@ -25,11 +26,9 @@ func SanitizeMap(in map[string]any) map[string]any {
 		}
 		// If value itself is a map[string]any, sanitize nested maps shallowly.
 		switch m := v.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			mm := make(map[string]any, len(m))
-			for kk, vv := range m {
-				mm[kk] = vv
-			}
+			maps.Copy(mm, m)
 			out[k] = SanitizeMap(mm)
 		default:
 			out[k] = v

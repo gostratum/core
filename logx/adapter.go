@@ -3,6 +3,7 @@ package logx
 
 import (
 	"context"
+	"reflect"
 
 	"go.uber.org/zap"
 )
@@ -57,6 +58,31 @@ func FromContext(ctx context.Context) Logger {
 	return &zapAdapter{l: zap.NewNop()}
 }
 
+// Sanitizable is optionally implemented by configuration structs with sensitive fields.
+// The logger will automatically sanitize types implementing this interface when
+// logging with logx.Any(), preventing accidental exposure of secrets.
+//
+// Example:
+//
+//	type DBConfig struct {
+//	    Host     string `mapstructure:"host"`
+//	    Password string `mapstructure:"password"`
+//	}
+//
+//	func (c *DBConfig) Sanitize() any {
+//	    safe := *c
+//	    safe.Password = "[redacted]"
+//	    return &safe
+//	}
+//
+// When logged, secrets are automatically redacted:
+//
+//	logger.Info("Config loaded", logx.Any("db", dbConfig))
+//	// Output: {"db": {"host": "localhost", "password": "[redacted]"}}
+type Sanitizable interface {
+	Sanitize() any
+}
+
 // Err wraps an error into a zap.Field so callers can use logx.Err(err)
 func Err(err error) zap.Field { return zap.Error(err) }
 
@@ -67,5 +93,36 @@ func Bool(key string, val bool) zap.Field       { return zap.Bool(key, val) }
 func Int(key string, val int) zap.Field         { return zap.Int(key, val) }
 func Int64(key string, val int64) zap.Field     { return zap.Int64(key, val) }
 func Float64(key string, val float64) zap.Field { return zap.Float64(key, val) }
-func Any(key string, val any) zap.Field         { return zap.Any(key, val) }
-func Duration(key string, val any) zap.Field    { return zap.Any(key, val) }
+
+// Any creates a field for arbitrary values. If the value implements Sanitizable,
+// it will be automatically sanitized before logging to prevent accidental exposure
+// of secrets (passwords, API keys, tokens, DSNs, etc.).
+//
+// This provides defense-in-depth security: developers don't need to remember to
+// sanitize configs manually - it happens automatically.
+//
+// To bypass sanitization (e.g., for debugging), use zap.Any() directly:
+//
+//	import "go.uber.org/zap"
+//	logger.(*zapAdapter).l.Info("Debug", zap.Any("config", rawConfig))
+func Any(key string, val any) zap.Field {
+	// Check for nil interface
+	if val == nil {
+		return zap.Any(key, nil)
+	}
+
+	// Type assert to Sanitizable
+	if s, ok := val.(Sanitizable); ok {
+		// Use reflection to check if it's a nil pointer
+		rv := reflect.ValueOf(val)
+		if rv.Kind() == reflect.Ptr && rv.IsNil() {
+			return zap.Any(key, nil)
+		}
+
+		// Safe to call Sanitize()
+		return zap.Any(key, s.Sanitize())
+	}
+	return zap.Any(key, val)
+}
+
+func Duration(key string, val any) zap.Field { return zap.Any(key, val) }

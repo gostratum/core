@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Added
+- **logx.Sanitizable interface** - Automatic secret sanitization in logging
+  - Configs implementing `Sanitizable` are automatically sanitized when logged with `logx.Any()`
+  - Prevents accidental exposure of passwords, API keys, tokens, DSNs in logs
+  - Defense-in-depth security: developers don't need to remember to sanitize manually
+  - Zero performance overhead (simple type assertion + reflection for nil check)
+  - See examples in `logx/adapter_sanitize_test.go`
+
+### Security
+- **Auto-sanitization in logger** - `logx.Any()` now automatically redacts secrets
+  - Applies to any config struct implementing `Sanitize() any` method
+  - Handles nil pointers gracefully without panics
+  - Opt-out available via direct `zap.Any()` for debugging scenarios
 
 ## [0.2.1] - 2025-10-31
 
